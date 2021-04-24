@@ -4,8 +4,6 @@
 # Description: 
 #
 
-
-import os
 import sys
 import numpy as np
 import math
@@ -30,7 +28,7 @@ def get_command_line_input():
                       help='The distance between two layers of graphene in angstroms.')
   parser.add_argument('-s', '--start-z', dest='start_z', 
                       default=0.1, type=float,
-                      help='The distance between two layers of graphene in angstroms.')
+                      help='The start fractional coordinate at z direction of the first layer.')
   parser.add_argument('-p', '--in-plane-mis', dest='inplane_mis', 
                       default='0.0,0.0', type=str,
                       help='In plane mis-match about two layers in primitive cell fraction coordinates. input two numbers split by "," without any blank, corresponding to frac_x,frac_y. default is coinciding at origin.')
