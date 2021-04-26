@@ -4,7 +4,7 @@ from twist2d import *
 twist_demo = Twist2D()
 
 # Read in the layers in different POSCARs here
-twist_demo.read_init_poscar('./POSCAR', 3)
+twist_demo.read_init_poscar('./POSCAR', 2)
 # twist_demo.read_init_poscar('POSCAR2', 1)
 
 # Read in the supercell vectors in different layers
