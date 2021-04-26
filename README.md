@@ -1,3 +1,5 @@
 # Twist 2D
 
-## Usage: python TBG.py -h
+## Usage: 
+
+Read the examples to learn how to using this package.
