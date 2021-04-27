@@ -322,7 +322,9 @@ class Twist2D():
     """Generate the twisted layers atoms fractional coordinates."""
     # Check if supercell info is complete
     if len(self.supercell_info_list) != len(self.primcell_info_list):
-      self._exit("[error] supercell info not ready...")
+      self._exit(
+        "[error] The number of primitive cells for each layer (%d) do not agree with the number of layers (%d)." 
+        %(len(self.primcell_info_list), len(self.supercell_info_list)))
     # For each twist layers
     supercell_shift_z = start_z
     for i, supercell_info in enumerate(self.supercell_info_list):

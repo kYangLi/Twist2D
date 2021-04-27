@@ -9,7 +9,7 @@ from twist2d import *
 twist_demo = Twist2D()
 
 # Read in the primitive cell information of each layer
-twist_demo.read_primcell_of_layers('./POSCAR', 2)
+twist_demo.read_primcell_of_layers('./POSCAR', 3)
 
 # Initialize the different twisted layers 
 # (for different primitive cell condition)
