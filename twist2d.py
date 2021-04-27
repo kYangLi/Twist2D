@@ -7,7 +7,6 @@
 
 import sys
 import numpy as np
-from copy import deepcopy
 
 # Necessary Constants
 FLOAT_PREC = 1e-6
