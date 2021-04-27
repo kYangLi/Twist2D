@@ -81,9 +81,7 @@ class Twist2D():
   def _poscar_in_dirct_mode(self, lines):
     """Check if the POSCAR file is in the 'Direct' coordinates mode."""
     direct_str = lines[7]
-    if 'irect' not in direct_str:
-      return False
-    return True
+    return ('irect' in direct_str)
 
   def _get_poscar_prim_vecs(self, lines):
     """read in the poscar primitive cell vectors"""
@@ -170,25 +168,25 @@ class Twist2D():
                                [0, 0, a3p_z]])
     return supercell_vecs
     
-  def _get_supercell_shifts(self, a1_boder, a2_boder, 
-                                  super_mult_vec1, super_mult_vec2):
-    '''Get the supercell shift list for each sub-primitive-cell.'''
-    supercell_shifts = []
-    total_area = self.cross_a2d(super_mult_vec1, super_mult_vec2)
+  def _get_atoms_cell_shifts(self, a1_boder, a2_boder, 
+                                   supercell_a1p, supercell_a2p):
+    '''Get the atoms cell shifts in the supercell for each sub-primitive-cell. new_position_in_supercell = cell_shifts + atom_pos_in_primcell'''
+    atoms_cell_shifts = []
+    total_area = self.cross_a2d(supercell_a1p, supercell_a2p)
     for a1_i in range(a1_boder[0], a1_boder[1]):
       for a2_i in range(a2_boder[0], a2_boder[1]):
-        primit_coord = np.array([a1_i, a2_i])
+        shift_a1a2 = np.array([a1_i, a2_i])
         # !!! KEY code !!!
-        supercell_shift_a1 = \
-          self.cross_a2d(primit_coord, super_mult_vec2) // total_area
-        supercell_shift_a2 = \
-          self.cross_a2d(super_mult_vec1, primit_coord) // total_area
-        if (supercell_shift_a1 == 0) and (supercell_shift_a2 == 0):
-          supercell_shifts.append(primit_coord)
-    return supercell_shifts
+        supercell_a1_int = \
+          self.cross_a2d(shift_a1a2, supercell_a2p) // total_area
+        supercell_a2_int = \
+          self.cross_a2d(supercell_a1p, shift_a1a2) // total_area
+        if (supercell_a1_int == 0) and (supercell_a2_int == 0):
+          atoms_cell_shifts.append(shift_a1a2)
+    return atoms_cell_shifts
 
   def _get_supercell_atoms_coord(self, supercell_matrix_inv, a3p_z, a3_z,
-                                       supercell_shifts, atom_coord_list,
+                                       atoms_cell_shifts, atom_coord_list,
                                        scell_shift_x, scell_shift_y,
                                        supercell_vecs, supercell_shift_z):
     """Get the atomic fractional coordinates in the supercell"""
@@ -201,7 +199,7 @@ class Twist2D():
     # generate the supercell atoms
     supercell_atom_coord_list = []
     for coord in atom_coord_list:
-      for shift in supercell_shifts:
+      for shift in atoms_cell_shifts:
         # Get the primitive cell coords
         coord_x = coord[0] + shift[0]
         coord_y = coord[1] + shift[1] 
@@ -241,18 +239,18 @@ class Twist2D():
     a1_boder, a2_boder = \
       self._get_index_boder_of_atoms(super_mult_vec1, super_mult_vec2)
     # Find all atoms' shift vector in the supercell
-    supercell_shifts = self._get_supercell_shifts(a1_boder, a2_boder,
+    atoms_cell_shifts = self._get_atoms_cell_shifts(a1_boder, a2_boder,
                                                   super_mult_vec1,
                                                   super_mult_vec2)
     # Check the atom number in supercell
-    check_supercell_num = len(supercell_shifts)
+    check_supercell_num = len(atoms_cell_shifts)
     if check_supercell_num != supercell_num:
       self._exit("[error] Expect %d positions in suppercell, but find %d..." 
                   %(supercell_num, check_supercell_num))
     # Get fractional coordinates in supercell (min-z = 0.0)
     supercell_atom_coord_list, frac_z_range = \
       self._get_supercell_atoms_coord(supercell_matrix_inv, a3p_z, a3_z,
-                                      supercell_shifts, atom_coord_list,
+                                      atoms_cell_shifts, atom_coord_list,
                                       scell_shift_x, scell_shift_y,
                                       supercell_vecs, supercell_shift_z)
     return supercell_vecs, supercell_quantities_list, \
