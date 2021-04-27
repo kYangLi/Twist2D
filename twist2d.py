@@ -399,7 +399,9 @@ class Twist2D():
     supercell_vecs = self.supercell_info_list[0]["supercell_vecs"]
     for vec in supercell_vecs:
       out_poscar_lines.append(
-        "    % 4.8f    % 4.8f    % 4.8f" %(vec[0], vec[1], vec[2]))
+        "    %13s    %13s    %13s" %("%4.8f"%vec[0], 
+                                     "%4.8f"%vec[1], 
+                                     "%4.8f"%vec[2]))
     # Atoms symbol list
     org_elements_list, org_quantities_list, org_atom_coords_list = \
       self._combine_poscars()
