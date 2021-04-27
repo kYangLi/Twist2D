@@ -112,14 +112,11 @@ class Twist2D():
     atom_coord_list = self._get_poscar_atoms_coord(lines, sum(quantities_list))
     return elements_list, quantities_list, atom_coord_list
 
-  def _record_primcell_info(self, primcell_info, repeat_time):
+  def _record_primcell_info(self, primcell_info):
     """Record the poscar info to the poscar data list"""
     self.primcell_info_list.append(primcell_info)
-    for _ in range(repeat_time-1):
-      repeated_primcell_info = deepcopy(primcell_info)
-      self.primcell_info_list.append(repeated_primcell_info)
     
-  def read_primcell_of_layers(self, filename, repeat_time=2):
+  def read_primcell_of_layers(self, filename):
     """Read the info in the init poscar file"""
     # Read in the contant of POSCAR
     lines = self._read_file_lines(filename)
@@ -137,7 +134,7 @@ class Twist2D():
                      "elements"    : elements_list,
                      "quantities"  : quantities_list,
                      "atom_coords" : atom_coord_list}
-    self._record_primcell_info(primcell_info, repeat_time)
+    self._record_primcell_info(primcell_info)
 
   # +--------------------+
   # | Generate Supercell |
@@ -309,8 +306,12 @@ class Twist2D():
       atom_coords[coord_i] = coord
     return atom_coords
 
-  def add_layer(self, mult_a1p, mult_a2p, layer_dis=2, scs_x=0.0, scs_y=0.0):
+  def add_layer(self, mult_a1p, mult_a2p, layer_dis=2, scs_x=0.0, scs_y=0,
+                      prim_poscar=DEFAULT_IN_POSCAR):
     """Read in the the layers' parameters in supercell"""
+    # Read in the primitive cell info
+    self.read_primcell_of_layers(prim_poscar)
+    # Read in the supercell info
     curr_supercell_info = {"super_mult_a1"  : np.array(mult_a1p),
                            "super_mult_a2"  : np.array(mult_a2p),
                            "layer_distance" : layer_dis,
@@ -464,23 +465,24 @@ class Twist2D():
 ### Special System ###
 ######################
 class TwistBGL(Twist2D):
-  def init_graphenelike_slayers(self, m, n, layer_dis, scs_x, scs_y):
+  def add_graphenelike_layers(self, m, n, layer_dis, scs_x, scs_y, prim_poscar):
     """Write in the graphene like supercell vectors"""
     # 1st layer
     mult_a1p = [m, n]
     mult_a2p = [-n, m+n]
-    self.add_layer(mult_a1p, mult_a2p, layer_dis, scs_x, scs_y)
+    self.add_layer(mult_a1p, mult_a2p, layer_dis, scs_x, scs_y, prim_poscar)
     # 2nd layer
     mult_a1p = [n, m]
     mult_a2p = [-m, n+m]
-    self.add_layer(mult_a1p, mult_a2p, layer_dis, scs_x, scs_y)
+    self.add_layer(mult_a1p, mult_a2p, layer_dis, scs_x, scs_y, prim_poscar)
 
-  def gen_TBG(self, m, n,
-              poscar_init=DEFAULT_IN_POSCAR, poscar_out=DEFAULT_OUT_POSCAR,
-              start_z=0.1, a3p_z=20.0, layer_dis=2.0, scs_x=0.0, scs_y=0.0):
+  def gen_TBGL(self, m, n,
+                     prim_poscar=DEFAULT_IN_POSCAR, 
+                     poscar_out=DEFAULT_OUT_POSCAR,
+                     start_z=0.1, a3p_z=20.0, layer_dis=2.0, 
+                     scs_x=0.0, scs_y=0.0):
     """Generate the twisted bilayer graphene(TBG) system."""
-    self.read_primcell_of_layers(poscar_init, repeat_time=2)
-    self.init_graphenelike_slayers(m, n, layer_dis, scs_x, scs_y)
+    self.add_graphenelike_layers(m, n, layer_dis, scs_x, scs_y, prim_poscar)
     self.twist_layers(start_z, a3p_z)
     # Update the out POSCAR name
     if poscar_out == DEFAULT_OUT_POSCAR:
