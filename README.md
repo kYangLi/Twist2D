@@ -2,7 +2,7 @@
 
 ## Descripution:
 
-A python module for twist any mult-layers 2D materials.
+A python module for twisting any mult-layers 2D materials.
 
 ## Usage: 
 
