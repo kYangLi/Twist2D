@@ -1,6 +1,6 @@
 # Twist 2D
 
-## Desripution:
+## Descripution:
 
 A python module for twist any mult-layers 2D materials.
 
