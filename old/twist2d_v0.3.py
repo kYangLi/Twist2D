@@ -2,10 +2,7 @@
 # Author: Yang Li
 # Email: yangli18@mails.tsinghua.edu.cn
 # Date: 2021.04.27
-# Description: 
-# Module for twisting the 2D materials,
-#   Special thanks for 
-#   guoxm teach me the wonderful integer supercell generation method
+# Description: Module for twisting the 2D materials
 
 
 import sys
@@ -42,10 +39,6 @@ class Twist2D():
     frac_vec = np.dot(cart_vec, cell_vecs_inv)
     return frac_vec
 
-  def float_eq(self, f1, f2):
-    """float equal"""
-    return abs(f1 - f2) < FLOAT_PREC
-
   def calc_vectors_angle(self, v1, v2):
     # Get the dot product
     v1dotv2 = np.dot(v1, v2)
@@ -65,9 +58,9 @@ class Twist2D():
     """angle pi to degree"""
     return angle * 180 / np.pi
 
-  def cross_a2d(self, v1, v2):
-    """Calculate the abs value of cross mult between two 2d array"""
-    return v1[0]*v2[1] - v1[1]*v2[0]
+  def float_eq(self, f1, f2):
+    """float equal"""
+    return abs(f1 - f2) < FLOAT_PREC
 
   # +----------------+
   # | Read in POSCAR |
@@ -145,9 +138,45 @@ class Twist2D():
   # +--------------------+
   # | Generate Supercell |
   # +--------------------+
+  def _frac_coord_is_in_cell(self, coord):
+    """Determine whether the fractional coordinate is in the cell"""
+    # Get fractional coordinates
+    frac_a1 = coord[0]
+    frac_a2 = coord[1]
+    # Judge
+    in_body = (frac_a1 > 0.0) and (frac_a1 < 1.0) and \
+              (frac_a2 > 0.0) and (frac_a2 < 1.0)
+    at_a1_upper_edge = self.float_eq(frac_a1, 1.0) and \
+                       frac_a2 > 0.0 and frac_a2 < 1.0
+    at_a1_lower_edge = self.float_eq(frac_a1, 0.0) and \
+                       frac_a2 > 0.0 and frac_a2 < 1.0
+    at_a2_upper_edge = self.float_eq(frac_a2, 1.0) and \
+                       frac_a1 > 0.0 and frac_a1 < 1.0
+    at_a2_lower_edge = self.float_eq(frac_a2, 0.0) and \
+                       frac_a1 > 0.0  and frac_a1 < 1.0
+    at_0_0 = self.float_eq(frac_a1, 0.0) and \
+             self.float_eq(frac_a2, 0.0)
+    at_a1_0 = self.float_eq(frac_a1, 1.0) and \
+             self.float_eq(frac_a2, 0.0)
+    at_0_a2 = self.float_eq(frac_a1, 0.0) and \
+             self.float_eq(frac_a2, 1.0)
+    at_a1_a2 = self.float_eq(frac_a1, 1.0) and \
+             self.float_eq(frac_a2, 1.0)
+    in_cell = (in_body or 
+               at_a1_lower_edge or 
+               at_a2_lower_edge or  
+               at_0_0
+              ) and (not (
+                at_a1_upper_edge or 
+                at_a2_upper_edge or 
+                at_a1_0 or at_0_a2 or at_a1_a2
+                    )
+              )
+    return in_cell
+
   def _get_atoms_num_in_supercell(self, super_mult_vec1, super_mult_vec2):
     """Get the atoms number in the supercell"""
-    return abs(self.cross_a2d(super_mult_vec1, super_mult_vec2))
+    return abs(np.cross(super_mult_vec1, super_mult_vec2))
 
   def _get_index_boder_of_atoms(self, a1p, a2p):
     """Get the boder of the atoms indeies searching"""
@@ -157,8 +186,8 @@ class Twist2D():
     a1_lower = min(0, a1p[0], a2p[0], a12p[0])
     a2_upper = max(0, a1p[1], a2p[1], a12p[1])
     a2_lower = min(0, a1p[1], a2p[1], a12p[1])
-    a1_boder = [a1_lower, a1_upper+1]
-    a2_boder = [a2_lower, a2_upper+1]
+    a1_boder = [a1_lower, a1_upper]
+    a2_boder = [a2_lower, a2_upper]
     return a1_boder, a2_boder
 
   def _get_supercell_vecs(self, supercell_matrix, primitive_vecs, a3p_z):
@@ -170,21 +199,19 @@ class Twist2D():
                                [0, 0, a3p_z]])
     return supercell_vecs
     
-  def _get_supercell_shifts(self, a1_boder, a2_boder, 
-                                  super_mult_vec1, super_mult_vec2):
+  def _get_supercell_shifts(self, a1_boder, a2_boder, supercell_matrix_inv):
     '''Get the supercell shift list for each sub-primitive-cell.'''
     supercell_shifts = []
-    total_area = self.cross_a2d(super_mult_vec1, super_mult_vec2)
+    relav_coord = [0.5, 0.5]
     for a1_i in range(a1_boder[0], a1_boder[1]):
       for a2_i in range(a2_boder[0], a2_boder[1]):
-        primit_coord = np.array([a1_i, a2_i])
-        # !!! KEY code !!!
-        supercell_shift_a1 = \
-          self.cross_a2d(primit_coord, super_mult_vec2) // total_area
-        supercell_shift_a2 = \
-          self.cross_a2d(super_mult_vec1, primit_coord) // total_area
-        if (supercell_shift_a1 == 0) and (supercell_shift_a2 == 0):
-          supercell_shifts.append(primit_coord)
+        coord_x = relav_coord[0] + a1_i
+        coord_y = relav_coord[1] + a2_i
+        primit_coord = np.array([coord_x, coord_y])
+        supercell_coord = np.dot(primit_coord, supercell_matrix_inv)
+        # If the points is inside the cell or at the edge
+        if self._frac_coord_is_in_cell(supercell_coord):
+          supercell_shifts.append([a1_i, a2_i])
     return supercell_shifts
 
   def _get_supercell_atoms_coord(self, supercell_matrix_inv, a3p_z, a3_z,
@@ -242,8 +269,7 @@ class Twist2D():
       self._get_index_boder_of_atoms(super_mult_vec1, super_mult_vec2)
     # Find all atoms' shift vector in the supercell
     supercell_shifts = self._get_supercell_shifts(a1_boder, a2_boder,
-                                                  super_mult_vec1,
-                                                  super_mult_vec2)
+                                                  supercell_matrix_inv)
     # Check the atom number in supercell
     check_supercell_num = len(supercell_shifts)
     if check_supercell_num != supercell_num:
@@ -261,6 +287,24 @@ class Twist2D():
   # +--------------+
   # | Twist Layers |
   # +--------------+
+  def _move_atoms_to_one_cell(self, atom_coords):
+    """Check and move all of the frac coordinates of atoms to one cell"""
+    coord_move_list = np.array([[1,1,0], [1,0,0], [1,-1,0], 
+                                [0,1,0], [0,-1,0],
+                                [-1,1,0], [-1,0,0], [-1,-1,0]])
+    for coord_i, coord in enumerate(atom_coords):
+      if not self._frac_coord_is_in_cell(coord):
+        for move in coord_move_list:
+          try_coord = coord + move
+          if self._frac_coord_is_in_cell(try_coord):
+            coord = try_coord
+            break
+      if not self._frac_coord_is_in_cell(coord):
+        print("[warning] Vector shift failed: [%f, %f, %f] ..." 
+              %(coord[0], coord[1], coord[2]))
+      atom_coords[coord_i] = coord
+    return atom_coords
+
   def add_layer(self, mult_a1p, mult_a2p, layer_dis=2, scs_x=0.0, scs_y=0,
                       prim_poscar=DEFAULT_IN_POSCAR):
     """Read in the the layers' parameters in supercell"""
@@ -306,6 +350,9 @@ class Twist2D():
       supercell_shift_z = frac_z_range[1] + layer_dis/a3p_z
       if supercell_shift_z >= 1.0:
         self._exit("[error] Coordinate z is out of range, pls reduce the layer distance or increase the cell length of z.")
+      # Recheck and move all of atoms to one supercell
+      supercell_atom_coord_list = \
+        self._move_atoms_to_one_cell(supercell_atom_coord_list)
       # Record the current rotated supercell info
       self.supercell_info_list[i]["supercell_vecs"] = supercell_vecs
       self.supercell_info_list[i]["supercell_quantities_list"] = \
