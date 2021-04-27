@@ -309,8 +309,7 @@ class Twist2D():
       atom_coords[coord_i] = coord
     return atom_coords
 
-  def init_twisted_layers(self, mult_a1p, mult_a2p, layer_dis=2, 
-                                scs_x=0.0, scs_y=0.0):
+  def add_layer(self, mult_a1p, mult_a2p, layer_dis=2, scs_x=0.0, scs_y=0.0):
     """Read in the the layers' parameters in supercell"""
     curr_supercell_info = {"super_mult_a1"  : np.array(mult_a1p),
                            "super_mult_a2"  : np.array(mult_a2p),
@@ -319,7 +318,7 @@ class Twist2D():
                            "scell_shift_y"  : scs_y,}
     self.supercell_info_list.append(curr_supercell_info)
 
-  def fill_twisted_layers_cell(self, start_z=0.0, a3p_z=20.0):
+  def twist_layers(self, start_z=0.0, a3p_z=20.0):
     """Generate the twisted layers atoms fractional coordinates."""
     # Check if supercell info is complete
     if len(self.supercell_info_list) != len(self.primcell_info_list):
@@ -468,11 +467,11 @@ class TwistBGL(Twist2D):
     # 1st layer
     mult_a1p = [m, n]
     mult_a2p = [-n, m+n]
-    self.init_twisted_layers(mult_a1p, mult_a2p, layer_dis, scs_x, scs_y)
+    self.add_layer(mult_a1p, mult_a2p, layer_dis, scs_x, scs_y)
     # 2nd layer
     mult_a1p = [n, m]
     mult_a2p = [-m, n+m]
-    self.init_twisted_layers(mult_a1p, mult_a2p, layer_dis, scs_x, scs_y)
+    self.add_layer(mult_a1p, mult_a2p, layer_dis, scs_x, scs_y)
 
   def gen_TBG(self, m, n,
               poscar_init=DEFAULT_IN_POSCAR, poscar_out=DEFAULT_OUT_POSCAR,
@@ -480,7 +479,7 @@ class TwistBGL(Twist2D):
     """Generate the twisted bilayer graphene(TBG) system."""
     self.read_primcell_of_layers(poscar_init, repeat_time=2)
     self.init_graphenelike_slayers(m, n, layer_dis, scs_x, scs_y)
-    self.fill_twisted_layers_cell(start_z, a3p_z)
+    self.twist_layers(start_z, a3p_z)
     # Update the out POSCAR name
     if poscar_out == DEFAULT_OUT_POSCAR:
       poscar_out = 'POSCAR.T2D-%dx%d.vasp' %(m, n)

@@ -20,11 +20,11 @@ n = 8
 # --> 1st layer
 mult_a1p = [m, n]
 mult_a2p = [-n, m-n]
-twist_demo.init_twisted_layers(mult_a1p, mult_a2p, layer_dis=3)
+twist_demo.add_layer(mult_a1p, mult_a2p, layer_dis=3)
 # --> 2nd layer
 mult_a1p = [n, m]
 mult_a2p = [-m, n-m]
-twist_demo.init_twisted_layers(mult_a1p, mult_a2p)
+twist_demo.add_layer(mult_a1p, mult_a2p)
 
 # ### For the primitive cell of VSe2 in 60 degree (more common)
 # m = 7
@@ -32,14 +32,14 @@ twist_demo.init_twisted_layers(mult_a1p, mult_a2p)
 # # --> 1st layer
 # mult_a1p = [m, n]
 # mult_a2p = [-n, m+n]
-# twist_demo.init_twisted_layers(mult_a1p, mult_a2p, layer_dis=3)
+# twist_demo.add_layer(mult_a1p, mult_a2p, layer_dis=3)
 # # --> 2nd layer
 # mult_a1p = [n, m]
 # mult_a2p = [-m, n+m]
-# twist_demo.init_twisted_layers(mult_a1p, mult_a2p)
+# twist_demo.add_layer(mult_a1p, mult_a2p)
 
 # Fill the cell with the layers
-twist_demo.fill_twisted_layers_cell(start_z=0.1)
+twist_demo.twist_layers(start_z=0.1)
 
 # (Optional) Calculate the twisted angles of each layer in degree 
 twisted_angles = twist_demo.calc_layers_twist_angles()
