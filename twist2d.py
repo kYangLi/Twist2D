@@ -7,7 +7,6 @@
 
 import sys
 import numpy as np
-import math
 from copy import deepcopy
 
 # Necessary Constants
@@ -47,13 +46,22 @@ class Twist2D():
     # Get the length of v1, v2
     length_v1 = np.sqrt(np.dot(v1, v1))
     length_v2 = np.sqrt(np.dot(v2, v2))
-    # Calc angle
+    # Get cos_theta
     cos_theta = v1dotv2 / (length_v1 * length_v2)
+    # In the case cos(theta) little larger than 1.0
+    if self.float_eq(cos_theta, 1.0):
+      cos_theta = 1.0
+    # Get theta
     theta = np.arccos(cos_theta)
     return theta 
 
   def angle_pi2degree(self, angle):
+    """angle pi to degree"""
     return angle * 180 / np.pi
+
+  def float_eq(self, f1, f2):
+    """float equal"""
+    return abs(f1 - f2) < FLOAT_PREC
 
   # +----------------+
   # | Read in POSCAR |
@@ -136,14 +144,39 @@ class Twist2D():
   # +--------------------+
   def _frac_coord_is_in_cell(self, coord):
     """Determine whether the fractional coordinate is in the cell"""
-    frac_x = coord[0]
-    frac_y = coord[1]
-    return ((frac_x > 0.0) and (frac_x < 1.0) and
-            (frac_y > 0.0) and (frac_y < 1.0) and 
-            (not math.isclose(frac_x, 1.0, rel_tol=FLOAT_PREC)) and
-            (not math.isclose(frac_y, 1.0, rel_tol=FLOAT_PREC))
-            ) or math.isclose(frac_x, 0.0, rel_tol=FLOAT_PREC) \
-            or math.isclose(frac_y, 0.0, rel_tol=FLOAT_PREC)
+    # Get fractional coordinates
+    frac_a1 = coord[0]
+    frac_a2 = coord[1]
+    # Judge
+    in_body = (frac_a1 > 0.0) and (frac_a1 < 1.0) and \
+              (frac_a2 > 0.0) and (frac_a2 < 1.0)
+    at_a1_upper_edge = self.float_eq(frac_a1, 1.0) and \
+                       frac_a2 > 0.0 and frac_a2 < 1.0
+    at_a1_lower_edge = self.float_eq(frac_a1, 0.0) and \
+                       frac_a2 > 0.0 and frac_a2 < 1.0
+    at_a2_upper_edge = self.float_eq(frac_a2, 1.0) and \
+                       frac_a1 > 0.0 and frac_a1 < 1.0
+    at_a2_lower_edge = self.float_eq(frac_a2, 0.0) and \
+                       frac_a1 > 0.0  and frac_a1 < 1.0
+    at_0_0 = self.float_eq(frac_a1, 0.0) and \
+             self.float_eq(frac_a2, 0.0)
+    at_a1_0 = self.float_eq(frac_a1, 1.0) and \
+             self.float_eq(frac_a2, 0.0)
+    at_0_a2 = self.float_eq(frac_a1, 0.0) and \
+             self.float_eq(frac_a2, 1.0)
+    at_a1_a2 = self.float_eq(frac_a1, 1.0) and \
+             self.float_eq(frac_a2, 1.0)
+    in_cell = (in_body or 
+               at_a1_lower_edge or 
+               at_a2_lower_edge or  
+               at_0_0
+              ) and (not (
+                at_a1_upper_edge or 
+                at_a2_upper_edge or 
+                at_a1_0 or at_0_a2 or at_a1_a2
+                    )
+              )
+    return in_cell
 
   def _get_atoms_num_in_supercell(self, super_mult_vec1, super_mult_vec2):
     """Get the atoms number in the supercell"""
@@ -260,20 +293,20 @@ class Twist2D():
   # +--------------+
   def _move_atoms_to_one_cell(self, atom_coords):
     """Check and move all of the frac coordinates of atoms to one cell"""
+    coord_move_list = np.array([[1,1,0], [1,0,0], [1,-1,0], 
+                                [0,1,0], [0,-1,0],
+                                [-1,1,0], [-1,0,0], [-1,-1,0]])
     for coord_i, coord in enumerate(atom_coords):
-      if (coord[0] > 1.0) or \
-          (math.isclose(coord[0], 1.0, rel_tol=FLOAT_PREC)):
-        atom_coords[coord_i][0] -= 1
-      if coord[0] < 0.0:
-        atom_coords[coord_i][0] += 1
-      if (coord[1] > 1.0) or \
-          (math.isclose(coord[1], 1.0, rel_tol=FLOAT_PREC)):
-        atom_coords[coord_i][1] -= 1
-      if coord[1] < 0.0:
-        atom_coords[coord_i][1] += 1
-      if not self._frac_coord_is_in_cell(atom_coords[coord_i]):
-        print("[error] Vector error: [%f, %f, %f] ..." 
-                %(coord[0], coord[1], coord[2]))
+      if not self._frac_coord_is_in_cell(coord):
+        for move in coord_move_list:
+          try_coord = coord + move
+          if self._frac_coord_is_in_cell(try_coord):
+            coord = try_coord
+            break
+      if not self._frac_coord_is_in_cell(coord):
+        print("[warning] Vector shift failed: [%f, %f, %f] ..." 
+              %(coord[0], coord[1], coord[2]))
+      atom_coords[coord_i] = coord
     return atom_coords
 
   def init_twisted_layers(self, mult_a1p, mult_a2p, layer_dis=2, 

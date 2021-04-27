@@ -34,6 +34,8 @@ twist_demo.init_twisted_layers(mult_a1p, mult_a2p)
 # twist_demo.writein_supercell_vector(mult_a1p, mult_a2p)
 
 # Fill the cell with the layers
+#  - start_z: The lowest atom's fractional coordinates in z, default 0.1
+#  - a3p_z: The length of the c vector in z direction, default 20A.
 twist_demo.fill_twisted_layers_cell(start_z=0.1)
 
 # (Optional) Calculate the twisted angles of each layer in degree 
@@ -42,6 +44,7 @@ print(twisted_angles)
 
 # Write results to the file
 twist_demo.write_res_to_poscar()
+
 # PROGRAM END
 
 #%%
@@ -50,16 +53,16 @@ twist_demo.write_res_to_poscar()
 # +-------------------+
 from twist2d import *
 
-### If you are twisting a bilayer graphene like system, 
-###     you can write more simply like this:
-# Twist bilayer graphene like structures
+# If you are twisting a bilayer graphene-like system, 
+#   you can write more simply like this:
+
+# Twist bilayer graphene-like structures
 tbg_demo = TwistBGL()
 tbg_demo.gen_TBG(6, 7)
+#tbg_demo.gen_TBG(m=6, n=7, poscar_init='POSCAR', poscar_out="POSCAR.T2D.vasp", start_z=0.1, a3p_z=20.0, layer_dis=2.0, scs_x=0.0, scs_y=0.0)
+
 # (Optional) Calculate the twisted angles of each layer in degree 
 twisted_angles = tbg_demo.calc_layers_twist_angles()
 print(twisted_angles)
-#tbg_demo.gen_TBG(m=6, n=7, poscar_init='POSCAR', poscar_out="POSCAR.T2D.vasp", start_z=0.1, a3p_z=20.0, layer_dis=2.0, scs_x=0.0, scs_y=0.0)
 
 #PROGRAM END
-
-# %%
