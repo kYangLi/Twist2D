@@ -15,7 +15,9 @@ twist_demo = Twist2D()
 #  - prim_poscar: POSCAR for primitive cell of current layer, default 'POSCAR'. 
 m = 6
 n = 7
-#--> 1st layer
+#--> 1st layer 
+#    The 1st layer is also the base layer, which all of other layers will 
+#    try to add some strain to match the 1st layer's cell constants.
 super_a1_mult = [m, n]
 super_a2_mult = [-n, m+n]
 twist_demo.add_layer(super_a1_mult, super_a2_mult, layer_dis=3, prim_poscar="POSCAR")

@@ -53,8 +53,13 @@ class Twist2D():
 
 
   def cross_a2d(self, v1, v2):
-    """Calculate the abs value of cross mult between two 2d array"""
+    """Calculate the value of cross mult between two 2d array"""
     return v1[0]*v2[1] - v1[1]*v2[0]
+
+  
+  def abs_cross_a2d(self, v1, v2):
+    """Calculate the abs value of cross mult between two 2d array"""
+    return abs(self.cross_a2d(v1, v2))
 
 
   def calc_vectors_angle(self, v1, v2):
@@ -182,7 +187,7 @@ class Twist2D():
   # +--------------------+
   def _get_atoms_num_in_supercell(self, super_mult_vec1, super_mult_vec2):
     """Get the atoms number in the supercell"""
-    return abs(self.cross_a2d(super_mult_vec1, super_mult_vec2))
+    return self.abs_cross_a2d(super_mult_vec1, super_mult_vec2)
 
 
   def _get_index_boder_of_atoms(self, a1p, a2p):
@@ -394,6 +399,20 @@ class Twist2D():
       theta = self.angle_pi2degree(theta)
       twisted_angles.append(theta)
     return twisted_angles
+
+
+  def calc_layers_strain(self):
+    """calculate the strain added in each layer (volume changes)"""
+    layers_vol_changes = []
+    ref_prim_vec = self.primcell_info_list[0]["prim_vecs"]
+    ref_area = self.abs_cross_a2d(ref_prim_vec[0], ref_prim_vec[1])
+    for primcell_info in self.primcell_info_list:
+      prim_vec = primcell_info["prim_vecs"]
+      area = self.abs_cross_a2d(prim_vec[0], prim_vec[1])
+      vol_change = (area / ref_area) - 1
+      layers_vol_changes.append(vol_change)
+    return layers_vol_changes
+
 
 
   # +---------------+
