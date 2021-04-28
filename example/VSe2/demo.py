@@ -15,25 +15,25 @@ m = 15
 n = 8
 # The key parameters for twist-2d is the mult vectors
 # --> 1st layer
-mult_a1p = [m, n]
-mult_a2p = [-n, m-n]
-twist_demo.add_layer(mult_a1p, mult_a2p, layer_dis=3, prim_poscar="POSCAR")
+super_a1_mult = [m, n]
+super_a2_mult = [-n, m-n]
+twist_demo.add_layer(super_a1_mult, super_a2_mult, layer_dis=3, prim_poscar="POSCAR")
 # --> 2nd layer
-mult_a1p = [n, m]
-mult_a2p = [-m, n-m]
-twist_demo.add_layer(mult_a1p, mult_a2p, prim_poscar="POSCAR")
+super_a1_mult = [n, m]
+super_a2_mult = [-m, n-m]
+twist_demo.add_layer(super_a1_mult, super_a2_mult, prim_poscar="POSCAR")
 
 # ### For the primitive cell of VSe2 in 60 degree (more common)
 # m = 7
 # n = 8
 # # --> 1st layer
-# mult_a1p = [m, n]
-# mult_a2p = [-n, m+n]
-# twist_demo.add_layer(mult_a1p, mult_a2p, layer_dis=3, prim_poscar="POSCAR")
+# super_a1_mult = [m, n]
+# super_a2_mult = [-n, m+n]
+# twist_demo.add_layer(super_a1_mult, super_a2_mult, layer_dis=3, prim_poscar="POSCAR")
 # # --> 2nd layer
-# mult_a1p = [n, m]
-# mult_a2p = [-m, n+m]
-# twist_demo.add_layer(mult_a1p, mult_a2p, prim_poscar="POSCAR")
+# super_a1_mult = [n, m]
+# super_a2_mult = [-m, n+m]
+# twist_demo.add_layer(super_a1_mult, super_a2_mult, prim_poscar="POSCAR")
 
 # Fill the cell with the layers
 twist_demo.twist_layers(start_z=0.1)
