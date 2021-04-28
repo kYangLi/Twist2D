@@ -103,7 +103,7 @@ class Twist2D():
   def _poscar_in_dirct_mode(self, lines):
     """Check if the POSCAR file is in the 'Direct' coordinates mode."""
     direct_str = lines[7]
-    return ('irect' in direct_str)
+    return ('direct' in direct_str.lower())
 
 
   def _get_poscar_prim_vecs(self, lines):
