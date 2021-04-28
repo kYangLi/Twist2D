@@ -137,10 +137,10 @@ class Twist2D():
     atom_coord_list = []
     for line_i in range(8, 8+total_number):
       # Get the coord of current line's atom
-      coord_x = float(lines[line_i].split()[0])
-      coord_y = float(lines[line_i].split()[1])
-      coord_z = float(lines[line_i].split()[2])
-      curr_coord = np.array([coord_x, coord_y, coord_z])
+      coord_a = float(lines[line_i].split()[0])
+      coord_b = float(lines[line_i].split()[1])
+      coord_c = float(lines[line_i].split()[2])
+      curr_coord = np.array([coord_a, coord_b, coord_c])
       atom_coord_list.append(curr_coord)
     return atom_coord_list
 
@@ -254,15 +254,15 @@ class Twist2D():
     for coord in atom_coord_list:
       for shift in atoms_cell_shifts:
         # Get the primitive cell coords
-        coord_x = coord[0] + shift[0]
-        coord_y = coord[1] + shift[1] 
-        coord_z = (coord[2] - min_frac_z) * a3_z / super_a3_z + supercell_shift_z
-        primit_coord = np.array([coord_x, coord_y])
+        coord_a = coord[0] + shift[0]
+        coord_b = coord[1] + shift[1] 
+        coord_c = (coord[2] - min_frac_z) * a3_z / super_a3_z + supercell_shift_z
+        primit_coord = np.array([coord_a, coord_b])
         # Get the supercell coords
         supercell_coord = np.dot(primit_coord, supercell_matrix_inv)
         supercell_coord[0] += scell_shift_x
         supercell_coord[1] += scell_shift_y
-        supercell_coord = np.append(supercell_coord, coord_z)
+        supercell_coord = np.append(supercell_coord, coord_c)
         # Record
         supercell_atom_coord_list.append(supercell_coord)
     # Record the range of frac_z about the atoms
