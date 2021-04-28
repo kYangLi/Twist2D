@@ -100,7 +100,7 @@ class Twist2D():
     return lines
 
 
-  def _poscar_in_dirct_mode(self, lines):
+  def _poscar_in_direct_mode(self, lines):
     """Check if the POSCAR file is in the 'Direct' coordinates mode."""
     direct_str = lines[7]
     return ('direct' in direct_str.lower())
@@ -161,7 +161,7 @@ class Twist2D():
     # Read in the contant of POSCAR
     lines = self._read_file_lines(filename)
     # Check if the POSCAR in direct coordinate mode
-    if not self._poscar_in_dirct_mode(lines):
+    if not self._poscar_in_direct_mode(lines):
       self._exit("[error] Primitive POSCAR: the atoms' coordinates MUST in 'Direct' mode!")
     # Get the 2D vector of a1 a2
     prim_vecs, a3_z = self._get_poscar_prim_vecs(lines)
