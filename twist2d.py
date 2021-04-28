@@ -9,7 +9,9 @@
 
 
 import sys
+import os
 import numpy as np
+
 
 # Necessary Constants
 FLOAT_PREC = 1e-6
@@ -28,11 +30,13 @@ class Twist2D():
     self.primcell_info_list = []
     self.supercell_info_list = []
 
-  def _exit(self, contect='[error] Something goes wrong...'):
+
+  def _exit(self, contect='[error] Unknown: Something goes wrong...'):
     """exit the program with some error msg."""
     print(contect)
     sys.exit(1)
-  
+
+
   # +------------+
   # | Misc Tools |
   # +------------+
@@ -42,11 +46,19 @@ class Twist2D():
     frac_vec = np.dot(cart_vec, cell_vecs_inv)
     return frac_vec
 
-  def float_eq(self, f1, f2):
+
+  def float_eq(self, f1, f2, prec=FLOAT_PREC):
     """float equal"""
-    return abs(f1 - f2) < FLOAT_PREC
+    return abs(f1 - f2) < prec
+
+
+  def cross_a2d(self, v1, v2):
+    """Calculate the abs value of cross mult between two 2d array"""
+    return v1[0]*v2[1] - v1[1]*v2[0]
+
 
   def calc_vectors_angle(self, v1, v2):
+    """calculate the angle between two vectors"""
     # Get the dot product
     v1dotv2 = np.dot(v1, v2)
     # Get the length of v1, v2
@@ -61,39 +73,60 @@ class Twist2D():
     theta = np.arccos(cos_theta)
     return theta 
 
+
+  def calc_vectors_angle_wsign(self, v1, v2):
+    """calculate the angle between two vectors with the right hand rule"""
+    # Get the angle
+    theta = self.calc_vectors_angle(v1, v2)
+    # Get the sign
+    sign = np.sign(self.cross_a2d(v1, v2))
+    return sign * theta
+    
+
   def angle_pi2degree(self, angle):
     """angle pi to degree"""
     return angle * 180 / np.pi
 
-  def cross_a2d(self, v1, v2):
-    """Calculate the abs value of cross mult between two 2d array"""
-    return v1[0]*v2[1] - v1[1]*v2[0]
 
   # +----------------+
   # | Read in POSCAR |
   # +----------------+
   def _read_file_lines(self, filename=DEFAULT_IN_POSCAR):
     """Read in the file content to a list"""
+    if not os.path.isfile(filename):
+      self._exit("[error] Primitive POSCAR: file '%s' not found." %filename)
     with open(filename) as frp:
       lines = frp.readlines()
     return lines
+
 
   def _poscar_in_dirct_mode(self, lines):
     """Check if the POSCAR file is in the 'Direct' coordinates mode."""
     direct_str = lines[7]
     return ('irect' in direct_str)
 
+
   def _get_poscar_prim_vecs(self, lines):
     """read in the poscar primitive cell vectors"""
     length_unit = float(lines[1])
     a1_x = float(lines[2].split()[0]) * length_unit
     a1_y = float(lines[2].split()[1]) * length_unit
+    a1_z = float(lines[2].split()[2]) * length_unit
     a2_x = float(lines[3].split()[0]) * length_unit
     a2_y = float(lines[3].split()[1]) * length_unit
+    a2_z = float(lines[3].split()[2]) * length_unit
+    a3_x = float(lines[4].split()[0]) * length_unit
+    a3_y = float(lines[4].split()[1]) * length_unit
     a3_z = float(lines[4].split()[2]) * length_unit
     prim_vecs = np.array([[a1_x, a1_y], [a2_x, a2_y]])
+    if not (self.float_eq(a1_z, 0.0) and
+            self.float_eq(a2_z, 0.0) and
+            self.float_eq(a3_x, 0.0) and
+            self.float_eq(a3_y, 0.0)):
+      self._exit("[error] Primitive POSCAR: The c axis must in z direction!")
     return prim_vecs, a3_z
   
+
   def _get_poscar_atoms_coord(self, lines, total_number):
     """Get the POSCAR atoms' fractional coordinates"""
     atom_coord_list = []
@@ -106,6 +139,7 @@ class Twist2D():
       atom_coord_list.append(curr_coord)
     return atom_coord_list
 
+
   def _get_poscar_atoms_info(self, lines):
     """Get the atoms's info in the poscar"""
     # Get the atoms' symbols
@@ -116,17 +150,19 @@ class Twist2D():
     atom_coord_list = self._get_poscar_atoms_coord(lines, sum(quantities_list))
     return elements_list, quantities_list, atom_coord_list
 
+
   def _record_primcell_info(self, primcell_info):
     """Record the poscar info to the poscar data list"""
     self.primcell_info_list.append(primcell_info)
-    
+
+
   def read_primcell_of_layers(self, filename):
     """Read the info in the init poscar file"""
     # Read in the contant of POSCAR
     lines = self._read_file_lines(filename)
     # Check if the POSCAR in direct coordinate mode
     if not self._poscar_in_dirct_mode(lines):
-      self._exit("[error] The POSCAR MUST in 'Direct' mode!")
+      self._exit("[error] Primitive POSCAR: the atoms' coordinates MUST in 'Direct' mode!")
     # Get the 2D vector of a1 a2
     prim_vecs, a3_z = self._get_poscar_prim_vecs(lines)
     # Get the atoms' info
@@ -140,12 +176,14 @@ class Twist2D():
                      "atom_coords" : atom_coord_list}
     self._record_primcell_info(primcell_info)
 
+
   # +--------------------+
   # | Generate Supercell |
   # +--------------------+
   def _get_atoms_num_in_supercell(self, super_mult_vec1, super_mult_vec2):
     """Get the atoms number in the supercell"""
     return abs(self.cross_a2d(super_mult_vec1, super_mult_vec2))
+
 
   def _get_index_boder_of_atoms(self, a1p, a2p):
     """Get the boder of the atoms indeies searching"""
@@ -159,15 +197,17 @@ class Twist2D():
     a2_boder = [a2_lower, a2_upper+1]
     return a1_boder, a2_boder
 
-  def _get_supercell_vecs(self, supercell_matrix, primitive_vecs, a3p_z):
+
+  def _get_supercell_vecs(self, supercell_matrix, primitive_vecs, super_a3_z):
     """Get the supercell vectors"""
     # Supercell vectors in 2D
     svs_2d = np.dot(supercell_matrix, primitive_vecs)
     supercell_vecs = np.array([[svs_2d[0,0], svs_2d[0,1], 0],
                                [svs_2d[1,0], svs_2d[1,1], 0],
-                               [0, 0, a3p_z]])
+                               [0, 0, super_a3_z]])
     return supercell_vecs
     
+
   def _get_atoms_cell_shifts(self, a1_boder, a2_boder, 
                                    supercell_a1p, supercell_a2p):
     '''Get the atoms cell shifts in the supercell for each sub-primitive-cell. new_position_in_supercell = cell_shifts + atom_pos_in_primcell'''
@@ -185,13 +225,21 @@ class Twist2D():
           atoms_cell_shifts.append(shift_a1a2)
     return atoms_cell_shifts
 
-  def _get_supercell_atoms_coord(self, supercell_matrix_inv, a3p_z, a3_z,
+
+  def _get_coords_z_range(self, coord_list):
+    """Get the range of atoms' fractional coordinate z"""
+    min_z = min(np.array(coord_list)[:,2])
+    max_z = max(np.array(coord_list)[:,2])
+    return min_z, max_z
+
+
+  def _get_supercell_atoms_coord(self, supercell_matrix_inv, super_a3_z, a3_z,
                                        atoms_cell_shifts, atom_coord_list,
                                        scell_shift_x, scell_shift_y,
                                        supercell_vecs, supercell_shift_z):
     """Get the atomic fractional coordinates in the supercell"""
     # Find the minimal frac_z of the atoms
-    min_frac_z = min(np.array(atom_coord_list)[:,2])
+    min_frac_z, _ = self._get_coords_z_range(atom_coord_list)
     # Transfrom the scell shift from the Cart to Frac
     cart_vec = [scell_shift_x, scell_shift_y, 0]
     scell_shift_x, scell_shift_y, _ = \
@@ -203,7 +251,7 @@ class Twist2D():
         # Get the primitive cell coords
         coord_x = coord[0] + shift[0]
         coord_y = coord[1] + shift[1] 
-        coord_z = (coord[2] - min_frac_z) * a3_z / a3p_z + supercell_shift_z
+        coord_z = (coord[2] - min_frac_z) * a3_z / super_a3_z + supercell_shift_z
         primit_coord = np.array([coord_x, coord_y])
         # Get the supercell coords
         supercell_coord = np.dot(primit_coord, supercell_matrix_inv)
@@ -213,16 +261,23 @@ class Twist2D():
         # Record
         supercell_atom_coord_list.append(supercell_coord)
     # Record the range of frac_z about the atoms
-    min_frac_z = min(np.array(supercell_atom_coord_list)[:,2])
-    max_frac_z = max(np.array(supercell_atom_coord_list)[:,2])
-    frac_z_range = [min_frac_z, max_frac_z]
+    frac_z_range = self._get_coords_z_range(supercell_atom_coord_list)
     return supercell_atom_coord_list, frac_z_range
+
+
+  def _check_supercell_cellnum(self, atoms_cell_shifts, supercell_num):
+    """Check the supercell atoms' number"""
+    check_supercell_num = len(atoms_cell_shifts)
+    if check_supercell_num != supercell_num:
+      self._exit("[error] Supercell generation: expect %d primitive cell in supercell, but find %d..." 
+                 %(supercell_num, check_supercell_num))
+
 
   def gen_supercell(self, super_mult_vec1, super_mult_vec2, 
                           primitive_vecs, a3_z, quantities_list,
-                          atom_coord_list, a3p_z=20.0, scell_shift_x=0.0,
+                          atom_coord_list, super_a3_z=20.0, scell_shift_x=0.0,
                           scell_shift_y=0.0, supercell_shift_z=0.0):
-    """Generate the suppercell"""
+    """Generate the supercell"""
     # Supercell number
     supercell_num = self._get_atoms_num_in_supercell(super_mult_vec1,
                                                      super_mult_vec2)
@@ -233,52 +288,70 @@ class Twist2D():
     supercell_matrix_inv = np.linalg.inv(supercell_matrix)
     # Supercell vectors 
     supercell_vecs = \
-      self._get_supercell_vecs(supercell_matrix, primitive_vecs, a3p_z)
-    ### Calculate supercell shifts according to supercell vector a1',a2'
-    # Get the boder of the atomic index searching
+      self._get_supercell_vecs(supercell_matrix, primitive_vecs, super_a3_z)
+    # Calculate supercell shifts according to supercell vector a1',a2'
+    #--> Get the boder of the atomic index searching
     a1_boder, a2_boder = \
       self._get_index_boder_of_atoms(super_mult_vec1, super_mult_vec2)
-    # Find all atoms' shift vector in the supercell
+    #--> Find all atoms' shift vector in the supercell
     atoms_cell_shifts = self._get_atoms_cell_shifts(a1_boder, a2_boder,
-                                                  super_mult_vec1,
-                                                  super_mult_vec2)
-    # Check the atom number in supercell
-    check_supercell_num = len(atoms_cell_shifts)
-    if check_supercell_num != supercell_num:
-      self._exit("[error] Expect %d positions in suppercell, but find %d..." 
-                  %(supercell_num, check_supercell_num))
+                                                    super_mult_vec1,
+                                                    super_mult_vec2)
+    #--> Check the atom number in supercell
+    self._check_supercell_cellnum(atoms_cell_shifts, supercell_num)
     # Get fractional coordinates in supercell (min-z = 0.0)
     supercell_atom_coord_list, frac_z_range = \
-      self._get_supercell_atoms_coord(supercell_matrix_inv, a3p_z, a3_z,
+      self._get_supercell_atoms_coord(supercell_matrix_inv, super_a3_z, a3_z,
                                       atoms_cell_shifts, atom_coord_list,
                                       scell_shift_x, scell_shift_y,
                                       supercell_vecs, supercell_shift_z)
     return supercell_vecs, supercell_quantities_list, \
            supercell_atom_coord_list, frac_z_range
 
+
   # +--------------+
   # | Twist Layers |
   # +--------------+
-  def add_layer(self, mult_a1p, mult_a2p, layer_dis=2, scs_x=0.0, scs_y=0,
+  def add_layer(self, super_a1_mult, super_a2_mult, 
+                      layer_dis=2, scs_x=0.0, scs_y=0,
                       prim_poscar=DEFAULT_IN_POSCAR):
     """Read in the the layers' parameters in supercell"""
     # Read in the primitive cell info
     self.read_primcell_of_layers(prim_poscar)
     # Read in the supercell info
-    curr_supercell_info = {"super_mult_a1"  : np.array(mult_a1p),
-                           "super_mult_a2"  : np.array(mult_a2p),
+    curr_supercell_info = {"super_mult_a1"  : np.array(super_a1_mult),
+                           "super_mult_a2"  : np.array(super_a2_mult),
                            "layer_distance" : layer_dis,
                            "scell_shift_x"  : scs_x,
                            "scell_shift_y"  : scs_y,}
     self.supercell_info_list.append(curr_supercell_info)
+  
+  
+  def _check_primvecs_in_layers(self):
+    """Check the primitive cell vectors in different layers"""
+    # Get the reference vector of primitive cell
+    ref_primcell_vecs = self.primcell_info_list[0]["prim_vecs"]
+    ref_p_a1 = ref_primcell_vecs[0]
+    ref_p_a2 = ref_primcell_vecs[1]
+    # Check each primitive cell vectors
+    for i, primcell_info in enumerate(self.primcell_info_list):
+      layer_i = i + 1
+      prim_vecs = primcell_info["prim_vecs"]
+      p_a1 = prim_vecs[0]
+      p_a2 = prim_vecs[1]
+      theta_1 = self.calc_vectors_angle_wsign(ref_p_a1, p_a1)
+      theta_2 = self.calc_vectors_angle_wsign(ref_p_a2, p_a2)
+      # Discuss the different cases:
+      if theta_1 * theta_2 < 0.0:
+        print("[warning] Layer %d: the chirality of this layer's primitive cell vectors do not agree with the 1st layer's. Be careful when pick the super_a1,2_mult vector of this layer." %layer_i)
+      if not self.float_eq(abs(theta_1), abs(theta_2)):
+        print("[warning] Layer %d: the angle between primitive cell vectors a1,a2 in this layer do not agree with the 1st layer's. Be careful when pick the super_a1,2_mult vector of this layer." %layer_i)
 
-  def twist_layers(self, start_z=0.0, a3p_z=20.0):
+
+  def twist_layers(self, start_z=0.0, super_a3_z=20.0):
     """Generate the twisted layers atoms fractional coordinates."""
-    # Check if supercell info is complete
-    if len(self.supercell_info_list) != len(self.primcell_info_list):
-      self._exit(
-        "[error] The number of primitive cells for each layer (%d) do not agree with the number of layers (%d)." 
-        %(len(self.primcell_info_list), len(self.supercell_info_list)))
+    # Check the layers firstly
+    self._check_primvecs_in_layers()
     # For each twist layers
     supercell_shift_z = start_z
     for i, supercell_info in enumerate(self.supercell_info_list):
@@ -293,17 +366,16 @@ class Twist2D():
       a3_z = primcell_info["a3_z"]
       quantities_list = primcell_info["quantities"]
       atom_coord_list = primcell_info["atom_coords"]
-      # Generate the suppercell
-      supercell_vecs, supercell_quantities_list, supercell_atom_coord_list, \
-        frac_z_range = self.gen_supercell(super_mult_a1, super_mult_a2, 
-                                          primitive_vecs, a3_z, quantities_list,
-                                          atom_coord_list, a3p_z,
-                                          scell_shift_x, scell_shift_y,
-                                          supercell_shift_z)
+      # Generate the supercell
+      supercell_vecs, supercell_quantities_list, \
+        supercell_atom_coord_list, frac_z_range = \
+        self.gen_supercell(super_mult_a1, super_mult_a2, primitive_vecs, 
+                           a3_z, quantities_list, atom_coord_list, super_a3_z,
+                           scell_shift_x, scell_shift_y, supercell_shift_z)
       # Update the supercell shift z
-      supercell_shift_z = frac_z_range[1] + layer_dis/a3p_z
-      if supercell_shift_z >= 1.0:
-        self._exit("[error] Coordinate z is out of range, pls reduce the layer distance or increase the cell length of z.")
+      supercell_shift_z = frac_z_range[1] + (layer_dis / super_a3_z)
+      if supercell_shift_z > 1.0:
+        self._exit("[error] Twisting layers: coordinate z is out of range, pls reduce the layer distance or increase the cell length of z.")
       # Record the current rotated supercell info
       self.supercell_info_list[i]["supercell_vecs"] = supercell_vecs
       self.supercell_info_list[i]["supercell_quantities_list"] = \
@@ -311,7 +383,9 @@ class Twist2D():
       self.supercell_info_list[i]["supercell_atom_coord_list"] = \
         supercell_atom_coord_list
 
+
   def calc_layers_twist_angles(self):
+    """Calculate the layers twisted angles"""
     twisted_angles = []
     ref_vec_a1 = self.supercell_info_list[0]["supercell_vecs"][0]
     for supercell_info in self.supercell_info_list:
@@ -320,6 +394,7 @@ class Twist2D():
       theta = self.angle_pi2degree(theta)
       twisted_angles.append(theta)
     return twisted_angles
+
 
   # +---------------+
   # | POSCAR Output |
@@ -332,6 +407,7 @@ class Twist2D():
         if targ_ele == curr_ele:
           res_indeies.append([i, j])
     return res_indeies
+
 
   def _combine_poscars(self):
     """Combine the elements list in different layers' POSCAR"""
@@ -372,6 +448,7 @@ class Twist2D():
         org_elements_list.append(sym)
         org_quantities_list.append(sym_num)
     return org_elements_list, org_quantities_list, org_atom_coords_list
+
 
   def write_res_to_poscar(self, filename=DEFAULT_OUT_POSCAR):
     """Write the output POSCAR"""
@@ -415,25 +492,43 @@ class Twist2D():
 ### Special System ###
 ######################
 class TwistBGL(Twist2D):
+  def _check_angle(self, angle):
+    # Get the vector of primitive cell
+    for i, primcell_info in enumerate(self.primcell_info_list):
+      layer_i = i + 1
+      prim_vecs = primcell_info["prim_vecs"]
+      p_a1 = prim_vecs[0]
+      p_a2 = prim_vecs[1]
+      # Calculate the angle
+      phi = self.calc_vectors_angle(p_a1, p_a2)
+      phi = self.angle_pi2degree(phi)
+      # Compare to the target angle
+      if not self.float_eq(phi, angle, prec=1E-3):
+        self._exit("[error] Layer %d: the primitive cell vectors' angle must be 60 degree, current is %f." %(layer_i, phi))
+
+
   def add_graphenelike_layers(self, m, n, layer_dis, scs_x, scs_y, prim_poscar):
     """Write in the graphene like supercell vectors"""
     # 1st layer
-    mult_a1p = [m, n]
-    mult_a2p = [-n, m+n]
-    self.add_layer(mult_a1p, mult_a2p, layer_dis, scs_x, scs_y, prim_poscar)
+    super_a1_mult = [m, n]
+    super_a2_mult = [-n, m+n]
+    self.add_layer(super_a1_mult, super_a2_mult, layer_dis, scs_x, scs_y, prim_poscar)
     # 2nd layer
-    mult_a1p = [n, m]
-    mult_a2p = [-m, n+m]
-    self.add_layer(mult_a1p, mult_a2p, layer_dis, scs_x, scs_y, prim_poscar)
+    super_a1_mult = [n, m]
+    super_a2_mult = [-m, n+m]
+    self.add_layer(super_a1_mult, super_a2_mult, layer_dis, scs_x, scs_y, prim_poscar)
+    # Check if the primitive vector angle is 60 degree
+    self._check_angle(60)
+
 
   def gen_TBGL(self, m, n,
                      prim_poscar=DEFAULT_IN_POSCAR, 
                      poscar_out=DEFAULT_OUT_POSCAR,
-                     start_z=0.1, a3p_z=20.0, layer_dis=2.0, 
+                     start_z=0.1, super_a3_z=20.0, layer_dis=2.0, 
                      scs_x=0.0, scs_y=0.0):
     """Generate the twisted bilayer graphene(TBG) system."""
     self.add_graphenelike_layers(m, n, layer_dis, scs_x, scs_y, prim_poscar)
-    self.twist_layers(start_z, a3p_z)
+    self.twist_layers(start_z, super_a3_z)
     # Update the out POSCAR name
     if poscar_out == DEFAULT_OUT_POSCAR:
       poscar_out = 'POSCAR.T2D-%dx%d.vasp' %(m, n)
