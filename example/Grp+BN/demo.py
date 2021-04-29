@@ -30,6 +30,6 @@ twist_demo.write_res_to_poscar()
 twisted_angles = twist_demo.calc_layers_twist_angles()
 print(twisted_angles)
 
-# (Optional) Calculate the strain add (volume changes) in each layer
+# (Optional) Calculate the strain add (volume changes) in each layer, + for volume increasing compare to the orginal primitive cell, vice versa.
 strain_vol_changes = twist_demo.calc_layers_strain()
 print(strain_vol_changes)
