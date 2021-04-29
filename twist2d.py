@@ -409,7 +409,7 @@ class Twist2D():
     for primcell_info in self.primcell_info_list:
       prim_vec = primcell_info["prim_vecs"]
       area = self.abs_cross_a2d(prim_vec[0], prim_vec[1])
-      vol_change = (area / ref_area) - 1
+      vol_change = (ref_area / area) - 1
       layers_vol_changes.append(vol_change)
     return layers_vol_changes
 
