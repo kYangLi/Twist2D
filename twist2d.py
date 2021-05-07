@@ -404,11 +404,11 @@ class Twist2D():
   def calc_layers_strain(self):
     """calculate the strain added in each layer (volume changes)"""
     layers_vol_changes = []
-    ref_prim_vec = self.primcell_info_list[0]["prim_vecs"]
-    ref_area = self.abs_cross_a2d(ref_prim_vec[0], ref_prim_vec[1])
-    for primcell_info in self.primcell_info_list:
-      prim_vec = primcell_info["prim_vecs"]
-      area = self.abs_cross_a2d(prim_vec[0], prim_vec[1])
+    ref_svec = self.supercell_info_list[0]["supercell_vecs"]
+    ref_area = self.abs_cross_a2d(ref_svec[0][:2], ref_svec[1][:2])
+    for scell_info in self.supercell_info_list:
+      svec = scell_info["supercell_vecs"]
+      area = self.abs_cross_a2d(svec[0][:2], svec[1][:2])
       vol_change = (ref_area / area) - 1
       layers_vol_changes.append(vol_change)
     return layers_vol_changes
