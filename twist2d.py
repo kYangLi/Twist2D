@@ -378,9 +378,10 @@ class Twist2D():
                            a3_z, quantities_list, atom_coord_list, super_a3_z,
                            scell_shift_x, scell_shift_y, supercell_shift_z)
       # Update the supercell shift z
-      supercell_shift_z = frac_z_range[1] + (layer_dis / super_a3_z)
-      if supercell_shift_z > 1.0:
+      curr_max_atom_z = frac_z_range[1]
+      if curr_max_atom_z > 1.0: # Not use supercell_shift_z to avoid mistake near the bound.
         self._exit("[error] Twisting layers: coordinate z is out of range, pls reduce the layer distance or increase the cell length of z.")
+      supercell_shift_z = curr_max_atom_z + (layer_dis / super_a3_z)
       # Record the current rotated supercell info
       self.supercell_info_list[i]["supercell_vecs"] = supercell_vecs
       self.supercell_info_list[i]["supercell_quantities_list"] = \
